@@ -8,7 +8,7 @@ Ember.Component.extend Ember.AddeparMixins.StyleBindingsMixin,
 Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin,
   templateName:   'components/ember-table'
   classNames:     ['ember-table-tables-container']
-  styleBindings:  ['height']
+#  styleBindings:  ['height']
   height:         Ember.computed.alias '_tablesContainerHeight'
 
   # Array of Ember.Table.ColumnDefinition
