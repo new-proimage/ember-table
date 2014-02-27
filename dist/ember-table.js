@@ -383,7 +383,15 @@ Ember.AddeparMixins = Ember.AddeparMixins || Ember.Namespace.create();
 Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
   init: function () {
     this._super.apply(this, arguments);
+    if (this.get('enableSelection')) {
+      this.on('mouseDown', this.clickHandler);
+      this.on('keyDown', this.keyDownHandler);
+      this.on('contextMenu', this.contextMenuHandler);
+    }
     this.set('selection', []);
+    // pivot is used to determine the index
+    // used in shift selection
+    this.set('pivot', null);
   },
   attributeBindings: ['tabIndex'],
   tabIndex: -1,
@@ -406,15 +414,20 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
   clearSelection: function () {
     this.get('selection').clear();
   },
-  selectWithArrow: function (ev, direction) {
-    if (this.get('selection.length') !== 1) { return; }
-    var selectedIndex = this.get('content').indexOf(this.get('selection.firstObject'));
+  selectWithArrow: function (ev, direction, aggregate) {
+    var selectedIndex = this.get('content').indexOf(this.get('selection.lastObject'));
     if (direction === 'up') {
-      this.clearSelection();
+      if (!aggregate) {
+        this.clearSelection();
+        this.set('pivot', selectedIndex);
+      }
       this.addSelected(this.get('content').objectAt(selectedIndex - 1));
     }
     if (direction === 'down') {
-      this.clearSelection();
+      if (!aggregate) {
+        this.clearSelection();
+        this.set('pivot', selectedIndex);
+      }
       this.addSelected(this.get('content').objectAt(selectedIndex + 1));
     }
   },
@@ -436,35 +449,38 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
     // the selected items should be between the last
     // and currently clicked items
     if (ev.shiftKey) {
-      var lastSelectedIndex = this.get('content').indexOf(this.get('selection.lastObject')),
-        rowIndex = this.get('content').indexOf(row),
-        minIndex = Math.min(lastSelectedIndex, rowIndex),
-        maxIndex = Math.max(lastSelectedIndex, rowIndex);
+      var rowIndex = this.get('content').indexOf(row),
+          minIndex = Math.min(this.get('pivot'), rowIndex),
+          maxIndex = Math.max(this.get('pivot'), rowIndex);
       this.clearSelection();
       for (var i = minIndex; i <= maxIndex; i += 1) {
         this.addSelected(this.get('content').objectAt(i));
       }
     }
+    else {
+      // set pivot
+      this.set('pivot', this.get('content').indexOf(row));
+    }
     this.addSelected(row);
   },
-  click: function (ev) {
+  clickHandler: function (ev) {
     var row = this.getRowForEvent(ev);
     if (row !== void 0) {
       return this.handleSelection(ev, row.get('content'));
     }
   },
-  keyDown: function (ev) {
+  keyDownHandler: function (ev) {
     // disable default scrolling strategy of the browser
 
     switch (ev.keyCode) {
       // arrow up
       case 38:
         ev.preventDefault();
-        return this.selectWithArrow(ev, 'up');
+        return this.selectWithArrow(ev, 'up', ev.shiftKey);
       // arrow down
       case 40:
         ev.preventDefault();
-        return this.selectWithArrow(ev, 'down');
+        return this.selectWithArrow(ev, 'down', ev.shiftKey);
       // a
       case 65:
         if (ev.ctrlKey || ev.metaKey) { return this.selectAll(); }
@@ -476,7 +492,7 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
    * 2. If click is on the row that currently is in the list of selection, selection does not change
    * @param ev
    */
-  contextMenu: function (ev) {
+  contextMenuHandler: function (ev) {
     var clickedRow = this.getRowForEvent(ev);
     if (!this.get('selection').contains(clickedRow.get('content'))) {
       this.clearSelection();
@@ -1443,6 +1459,7 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
   forceFillColumns: false,
   enableColumnReorder: true,
   enableContentSelection: false,
+  enableSelection: true,
   tableRowViewClass: 'Ember.Table.TableRow',
   actions: {
     addColumn: Ember.K,
