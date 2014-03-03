@@ -130,21 +130,14 @@ helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
 Ember.TEMPLATES["header-cell"] = Ember.Handlebars.template(function anonymous(Handlebars,depth0,helpers,partials,data) {
 this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
-  var buffer = '', stack1, hashTypes, hashContexts, options, escapeExpression=this.escapeExpression, helperMissing=helpers.helperMissing;
+  var buffer = '', hashTypes, hashContexts, escapeExpression=this.escapeExpression;
 
 
   data.buffer.push("<div class=\"ember-table-content-container\" ");
   hashTypes = {};
   hashContexts = {};
   data.buffer.push(escapeExpression(helpers.action.call(depth0, "sortByColumn", "view.content", {hash:{},contexts:[depth0,depth0],types:["ID","ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  data.buffer.push(">\n  <span class=\"ember-table-content\" ");
-  hashContexts = {'title': depth0};
-  hashTypes = {'title': "ID"};
-  options = {hash:{
-    'title': ("view.content.headerCellName")
-  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
-  data.buffer.push(escapeExpression(((stack1 = helpers['bind-attr'] || depth0['bind-attr']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bind-attr", options))));
-  data.buffer.push(">\n    ");
+  data.buffer.push(">\n  <span class=\"ember-table-content\">\n    ");
   hashTypes = {};
   hashContexts = {};
   data.buffer.push(escapeExpression(helpers._triageMustache.call(depth0, "view.content.headerCellName", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
@@ -389,24 +382,28 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
       this.on('contextMenu', this.contextMenuHandler);
     }
     this.set('selection', []);
-    // pivot is used to determine the index
-    // used in shift selection
-    this.set('pivot', null);
+    this.set('baseSelectedIndex', null);
+    this.set('lastSelectedIndex', null);
   },
   attributeBindings: ['tabIndex'],
   tabIndex: -1,
+  isSelected: function (row) {
+    return this.get('selection').contains(row);
+  },
   addSelected: function (row) {
-    if (!this.get('selection').contains(row)) {
+    if (!this.isSelected(row)) {
       this.get('selection').pushObject(row);
     }
   },
   removeSelected: function (row) {
-    if (this.get('selection').contains(row)) {
+    if (this.isSelected(row)) {
       this.get('selection').removeObject(row);
     }
   },
   selectAll: function () {
-    this.get('selection').clear();
+    this.clearSelection();
+    this.set('baseSelectedIndex', null);
+    this.set('lastSelectedIndex', this.get('content.length'));
     // needs to be checked because content might be either regular array or array proxy
     var content = (Array.isArray(this.get('content'))) ? this.get('content') : this.get('content.content');
     this.get('selection').pushObjects(content);
@@ -414,25 +411,39 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
   clearSelection: function () {
     this.get('selection').clear();
   },
-  selectWithArrow: function (ev, direction, aggregate) {
-    var selectedIndex = this.get('content').indexOf(this.get('selection.lastObject'));
+  selectWithArrow: function (direction, aggregate) {
+    var rowIndex, futureRowIndex, row;
+    if (this.get('lastSelectedIndex') !== this.get('baseSelectedIndex')) {
+      rowIndex = this.get('lastSelectedIndex');
+    }
+    else {
+      rowIndex = this.get('baseSelectedIndex');
+    }
+
     if (direction === 'up') {
-      if (!aggregate) {
-        this.clearSelection();
-        this.set('pivot', selectedIndex);
-      }
-      this.addSelected(this.get('content').objectAt(selectedIndex - 1));
+      futureRowIndex = rowIndex - 1;
     }
     if (direction === 'down') {
-      if (!aggregate) {
-        this.clearSelection();
-        this.set('pivot', selectedIndex);
-      }
-      this.addSelected(this.get('content').objectAt(selectedIndex + 1));
+      futureRowIndex = rowIndex + 1;
+    }
+
+    if (!aggregate) {
+      this.clearSelection();
+      this.set('baseSelectedIndex', futureRowIndex);
+    }
+
+    this.set('lastSelectedIndex', futureRowIndex);
+    row = this.get('content').objectAt(futureRowIndex);
+    if (this.isSelected(row)) {
+      this.removeSelected(this.get('content').objectAt(rowIndex));
+    }
+    else {
+      this.addSelected(row);
     }
   },
   handleSelection: function (ev, row) {
     if (row === void 0) { return; }
+    var rowIndex = this.get('content').indexOf(row);
     // if none of the ctrl, meta, and shift keys
     // are pressed, clear the selection
     if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
@@ -449,17 +460,18 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
     // the selected items should be between the last
     // and currently clicked items
     if (ev.shiftKey) {
-      var rowIndex = this.get('content').indexOf(row),
-          minIndex = Math.min(this.get('pivot'), rowIndex),
-          maxIndex = Math.max(this.get('pivot'), rowIndex);
+      var minIndex = Math.min(this.get('baseSelectedIndex'), rowIndex),
+          maxIndex = Math.max(this.get('baseSelectedIndex'), rowIndex);
       this.clearSelection();
       for (var i = minIndex; i <= maxIndex; i += 1) {
         this.addSelected(this.get('content').objectAt(i));
       }
+      this.set('lastSelectedIndex', rowIndex);
     }
     else {
       // set pivot
-      this.set('pivot', this.get('content').indexOf(row));
+      this.set('baseSelectedIndex', rowIndex);
+      this.set('lastSelectedIndex', rowIndex);
     }
     this.addSelected(row);
   },
@@ -476,11 +488,11 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
       // arrow up
       case 38:
         ev.preventDefault();
-        return this.selectWithArrow(ev, 'up', ev.shiftKey);
+        return this.selectWithArrow('up', ev.shiftKey);
       // arrow down
       case 40:
         ev.preventDefault();
-        return this.selectWithArrow(ev, 'down', ev.shiftKey);
+        return this.selectWithArrow('down', ev.shiftKey);
       // a
       case 65:
         if (ev.ctrlKey || ev.metaKey) { return this.selectAll(); }
@@ -1447,6 +1459,7 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
   layoutName: 'components/ember-table',
   classNames: ['ember-table-tables-container'],
   classNameBindings: ['enableContentSelection:ember-table-content-selectable'],
+  styleBindings: ['height'],
   height: Ember.computed.alias('_tablesContainerHeight'),
   columns: null,
   numFixedColumns: 0,
@@ -1654,7 +1667,7 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
 
   _tableColumnsWidth: Ember.computed(function() {
     var availableWidth, contentWidth;
-    contentWidth = this._getTotalWidth(this.get('tableColumns'));
+    contentWidth = (this._getTotalWidth(this.get('tableColumns'))) + 3;
     availableWidth = this.get('_width') - this.get('_fixedColumnsWidth');
     if (contentWidth > availableWidth) {
       return contentWidth;
