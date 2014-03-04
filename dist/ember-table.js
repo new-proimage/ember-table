@@ -130,14 +130,21 @@ helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
 Ember.TEMPLATES["header-cell"] = Ember.Handlebars.template(function anonymous(Handlebars,depth0,helpers,partials,data) {
 this.compilerInfo = [4,'>= 1.0.0'];
 helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
-  var buffer = '', hashTypes, hashContexts, escapeExpression=this.escapeExpression;
+  var buffer = '', stack1, hashTypes, hashContexts, options, escapeExpression=this.escapeExpression, helperMissing=helpers.helperMissing;
 
 
   data.buffer.push("<div class=\"ember-table-content-container\" ");
   hashTypes = {};
   hashContexts = {};
   data.buffer.push(escapeExpression(helpers.action.call(depth0, "sortByColumn", "view.content", {hash:{},contexts:[depth0,depth0],types:["ID","ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
-  data.buffer.push(">\n  <span class=\"ember-table-content\">\n    ");
+  data.buffer.push(">\n  <span class=\"ember-table-content\" ");
+  hashContexts = {'title': depth0};
+  hashTypes = {'title': "ID"};
+  options = {hash:{
+    'title': ("view.content.headerCellName")
+  },contexts:[],types:[],hashContexts:hashContexts,hashTypes:hashTypes,data:data};
+  data.buffer.push(escapeExpression(((stack1 = helpers['bind-attr'] || depth0['bind-attr']),stack1 ? stack1.call(depth0, options) : helperMissing.call(depth0, "bind-attr", options))));
+  data.buffer.push(">\n    ");
   hashTypes = {};
   hashContexts = {};
   data.buffer.push(escapeExpression(helpers._triageMustache.call(depth0, "view.content.headerCellName", {hash:{},contexts:[depth0],types:["ID"],hashContexts:hashContexts,hashTypes:hashTypes,data:data})));
@@ -1035,7 +1042,7 @@ Ember.Table.TableRow = Ember.LazyItemView.extend({
 Ember.Table.TableCell = Ember.View.extend(Ember.AddeparMixins.StyleBindingsMixin, {
   templateName: 'table-cell',
   classNames: ['ember-table-cell'],
-  classNameBindings: 'column.textAlign',
+  classNameBindings: ['column.textAlign', 'row.isSelected:ember-table-selected'],
   styleBindings: 'width',
   row: Ember.computed.alias('parentView.row'),
   column: Ember.computed.alias('content'),
@@ -1459,7 +1466,6 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
   layoutName: 'components/ember-table',
   classNames: ['ember-table-tables-container'],
   classNameBindings: ['enableContentSelection:ember-table-content-selectable'],
-  styleBindings: ['height'],
   height: Ember.computed.alias('_tablesContainerHeight'),
   columns: null,
   numFixedColumns: 0,
@@ -1667,7 +1673,7 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
 
   _tableColumnsWidth: Ember.computed(function() {
     var availableWidth, contentWidth;
-    contentWidth = (this._getTotalWidth(this.get('tableColumns'))) + 3;
+    contentWidth = this._getTotalWidth(this.get('tableColumns'));
     availableWidth = this.get('_width') - this.get('_fixedColumnsWidth');
     if (contentWidth > availableWidth) {
       return contentWidth;

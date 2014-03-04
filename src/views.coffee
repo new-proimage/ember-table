@@ -123,7 +123,7 @@ Ember.Table.TableCell =
 Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   templateName: 'table-cell'
   classNames:         ['ember-table-cell']
-  classNameBindings:  'column.textAlign'
+  classNameBindings:  ['column.textAlign', 'row.isSelected:ember-table-selected'],
   styleBindings:      'width'
   row:        Ember.computed.alias 'parentView.row'
   column:     Ember.computed.alias 'content'
