@@ -6,7 +6,6 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
     if (this.get('enableSelection')) {
       this.on('mouseDown', this.clickEvent);
       this.on('keyDown', this.keyDownEvent);
-      this.on('contextMenu', this.contextMenuEvent);
     }
     this.set('selection', []);
     this.set('baseSelectedIndex', null);
@@ -70,7 +69,7 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
   },
   handleSelection: function (ev, row) {
     if (row === void 0) { return; }
-    var rowIndex = this.get('content').indexOf(row);
+    var rowIndex = (this.get('content') !== void 0) ? this.get('content').indexOf(row) : -1;
     // if none of the ctrl, meta, and shift keys
     // are pressed, clear the selection
     if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
@@ -104,8 +103,12 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
   },
   clickEvent: function (ev) {
     var row = this.getRowForEvent(ev);
-    if (row !== void 0) {
-      return this.handleSelection(ev, row.get('content'));
+    if (row === void 0) { return; }
+    if (ev.button === 2) {
+      this.contextMenuEvent(ev);
+    }
+    else {
+      this.handleSelection(ev, row.get('content'));
     }
   },
   keyDownEvent: function (ev) {
