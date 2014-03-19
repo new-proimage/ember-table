@@ -69,7 +69,7 @@ Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
   },
   handleSelection: function (ev, row) {
     if (row === void 0) { return; }
-    var rowIndex = (this.get('content') !== void 0) ? this.get('content').indexOf(row) : -1;
+    var rowIndex = (this.get('content') !== void 0 && Array.isArray(this.get('content'))) ? this.get('content').indexOf(row) : -1;
     // if none of the ctrl, meta, and shift keys
     // are pressed, clear the selection
     if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
