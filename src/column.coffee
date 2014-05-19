@@ -25,6 +25,7 @@ Ember.Table.ColumnDefinition = Ember.Object.extend
   # text align left | center | right
   textAlign: 'text-align-right'
   canAutoResize: yes
+  isVisible: yes
 
   # The view class we want to use for the header
   headerCellViewClass:  'Ember.Table.HeaderCell'

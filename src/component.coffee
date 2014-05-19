@@ -41,6 +41,8 @@ Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin,
 
   enableSelection: yes
 
+  isHeaderContextMenu: no
+
   # specify the view class to use for rendering the table rows
   tableRowViewClass: 'Ember.Table.TableRow'
 
@@ -50,8 +52,13 @@ Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin,
 
   onColumnSort: (column, newIndex) ->
     columns  = @get 'tableColumns'
+    columnDefinitions = @get 'columns'
+    newDefIndex = columnDefinitions.indexOf columns[newIndex]
     columns.removeObject column
     columns.insertAt newIndex, column
+  #changing the order of column definitions too for cinsistency
+    columnDefinitions.splice columnDefinitions.indexOf(column), 1
+    columnDefinitions.splice newDefIndex, 0, column
 
   ###*
   * Table Body Content - Array of Ember.Table.Row
@@ -85,11 +92,12 @@ Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin,
   fixedColumns: Ember.computed ->
     columns         = @get 'columns'
     return Ember.A() unless columns
+    columns = columns.filter (c) -> c.isVisible
     numFixedColumns = @get('numFixedColumns') or 0
     columns = columns.slice(0, numFixedColumns) or []
     @prepareTableColumns(columns)
     columns
-  .property 'columns.@each', 'numFixedColumns'
+  .property 'columns.@each.isVisible', 'numFixedColumns'
 
   ###*
   * Table Columns
@@ -100,11 +108,12 @@ Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin,
   tableColumns: Ember.computed ->
     columns         = @get 'columns'
     return Ember.A() unless columns
+    columns = columns.filter (c) -> c.isVisible
     numFixedColumns = @get('numFixedColumns') or 0
     columns = columns.slice(numFixedColumns, columns.get('length')) or []
     @prepareTableColumns(columns)
     columns
-  .property 'columns.@each', 'numFixedColumns'
+  .property 'columns.@each.isVisible', 'numFixedColumns'
 
   prepareTableColumns: (columns) ->
     columns.setEach 'controller', this

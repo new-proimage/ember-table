@@ -228,6 +228,16 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
     @$().scrollLeft @get('scrollLeft')
   , 'scrollLeft'
 
+  init: ->
+    @_super()
+    if @get('controller').get('isHeaderContextMenu')
+      @contextMenu = (ev) ->
+        contextmenu = Ember.Table.HeaderContextMenuContainer.create
+          controller: @get('controller')
+          event: ev
+        contextmenu.append()
+        no
+
   didInsertElement: ->
     @_super()
     if @get('controller.enableColumnReorder')
