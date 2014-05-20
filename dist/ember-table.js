@@ -1514,7 +1514,7 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
   enableColumnReorder: true,
   enableContentSelection: false,
   enableSelection: true,
-  isHeaderContextMenu: false,
+  isHeaderContextMenu: true,
   tableRowViewClass: 'Ember.Table.TableRow',
   actions: {
     addColumn: Ember.K,
