@@ -113,7 +113,10 @@ Ember.Table.HeaderContextMenuMenu = Ember.CollectionView.extend
   classNames: ['header-contextmenu-menu']
   attributeBindings: ['style']
   style: Ember.computed ->
-    'top:' + @get('top') + 'px; left:' + @get('left') + 'px;'
+    vertical = 'top:' + @get('top') + 'px;'
+    horizontal = if @get('left') > (window.innerWidth / 2) then 'right:' +  
+      (window.innerWidth - @get('left')) + 'px;' else 'left:' + @get('left') + 'px;'
+    vertical + horizontal
   .property('top', 'left')
 
 Ember.Table.HeaderContextMenuContainer = Ember.ContainerView.extend

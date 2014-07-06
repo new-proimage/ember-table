@@ -787,7 +787,10 @@ Ember.Table.HeaderContextMenuMenu = Ember.CollectionView.extend({
   classNames: ['header-contextmenu-menu'],
   attributeBindings: ['style'],
   style: Ember.computed(function() {
-    return 'top:' + this.get('top') + 'px; left:' + this.get('left') + 'px;';
+    var horizontal, vertical;
+    vertical = 'top:' + this.get('top') + 'px;';
+    horizontal = this.get('left') > (window.innerWidth / 2) ? 'right:' + (window.innerWidth - this.get('left')) + 'px;' : 'left:' + this.get('left') + 'px;';
+    return vertical + horizontal;
   }).property('top', 'left')
 });
 
