@@ -136,7 +136,11 @@ helpers = this.merge(helpers, Ember.Handlebars.helpers); data = data || {};
 
   data.buffer.push("<div class=\"ember-table-content-container\" ");
   data.buffer.push(escapeExpression(helpers.action.call(depth0, "sortByColumn", "view.content", {hash:{},hashTypes:{},hashContexts:{},contexts:[depth0,depth0],types:["ID","ID"],data:data})));
-  data.buffer.push(">\n  <span class=\"ember-table-content\">\n    ");
+  data.buffer.push(">\n  <span class=\"ember-table-content\" ");
+  data.buffer.push(escapeExpression(helpers['bind-attr'].call(depth0, {hash:{
+    'title': ("view.content.headerCellName")
+  },hashTypes:{'title': "ID"},hashContexts:{'title': depth0},contexts:[],types:[],data:data})));
+  data.buffer.push(">\n    ");
   stack1 = helpers._triageMustache.call(depth0, "view.content.headerCellName", {hash:{},hashTypes:{},hashContexts:{},contexts:[depth0],types:["ID"],data:data});
   if(stack1 || stack1 === 0) { data.buffer.push(stack1); }
   data.buffer.push("\n  </span>\n</div>");
@@ -360,6 +364,156 @@ Ember.AddeparMixins.StyleBindingsMixin = Ember.Mixin.create({
   init: function() {
     this.applyStyleBindings();
     return this._super();
+  }
+});
+
+
+})();
+(function() {
+
+Ember.AddeparMixins = Ember.AddeparMixins || Ember.Namespace.create();
+
+Ember.AddeparMixins.SelectionMixin = Ember.Mixin.create({
+  init: function () {
+    this._super.apply(this, arguments);
+    if (this.get('enableSelection')) {
+      this.on('mouseDown', this.clickEvent);
+      this.on('keyDown', this.keyDownEvent);
+    }
+    this.set('selection', []);
+    this.set('baseSelectedIndex', null);
+    this.set('lastSelectedIndex', null);
+  },
+  attributeBindings: ['tabIndex'],
+  tabIndex: -1,
+  isSelected: function (row) {
+    return this.get('selection').contains(row);
+  },
+  addSelected: function (row) {
+    if (!this.isSelected(row)) {
+      this.get('selection').pushObject(row);
+    }
+  },
+  removeSelected: function (row) {
+    if (this.isSelected(row)) {
+      this.get('selection').removeObject(row);
+    }
+  },
+  selectAll: function () {
+    this.clearSelection();
+    this.set('baseSelectedIndex', null);
+    this.set('lastSelectedIndex', this.get('content.length'));
+    // needs to be checked because content might be either regular array or array proxy
+    var content = (Array.isArray(this.get('content'))) ? this.get('content') : this.get('content.content');
+    this.get('selection').pushObjects(content);
+  },
+  clearSelection: function () {
+    this.get('selection').clear();
+  },
+  selectWithArrow: function (direction, aggregate) {
+    var rowIndex, futureRowIndex, row;
+    if (this.get('lastSelectedIndex') !== this.get('baseSelectedIndex')) {
+      rowIndex = this.get('lastSelectedIndex');
+    }
+    else {
+      rowIndex = this.get('baseSelectedIndex');
+    }
+
+    if (direction === 'up') {
+      futureRowIndex = rowIndex - 1;
+    }
+    if (direction === 'down') {
+      futureRowIndex = rowIndex + 1;
+    }
+
+    if (!aggregate) {
+      this.clearSelection();
+      this.set('baseSelectedIndex', futureRowIndex);
+    }
+
+    this.set('lastSelectedIndex', futureRowIndex);
+    row = this.get('content').objectAt(futureRowIndex);
+    if (this.isSelected(row)) {
+      this.removeSelected(this.get('content').objectAt(rowIndex));
+    }
+    else {
+      this.addSelected(row);
+    }
+  },
+  handleSelection: function (ev, row) {
+    if (row === void 0) { return; }
+    var rowIndex = (this.get('content') !== void 0 && typeof this.get('content').indexOf === 'function') ? this.get('content').indexOf(row) : -1;
+    // if none of the ctrl, meta, and shift keys
+    // are pressed, clear the selection
+    if (!ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
+      this.clearSelection();
+    }
+
+    // deselect the row if ctrl button is pressed
+    // and the item is selected
+    if ((ev.ctrlKey || ev.metaKey) && this.get('selection').contains(row)) {
+      return this.removeSelected(row);
+    }
+
+    // if selection is performed with shift key
+    // the selected items should be between the last
+    // and currently clicked items
+    if (ev.shiftKey) {
+      var minIndex = Math.min(this.get('baseSelectedIndex'), rowIndex),
+          maxIndex = Math.max(this.get('baseSelectedIndex'), rowIndex);
+      this.clearSelection();
+      for (var i = minIndex; i <= maxIndex; i += 1) {
+        this.addSelected(this.get('content').objectAt(i));
+      }
+      this.set('lastSelectedIndex', rowIndex);
+    }
+    else {
+      // set pivot
+      this.set('baseSelectedIndex', rowIndex);
+      this.set('lastSelectedIndex', rowIndex);
+    }
+    this.addSelected(row);
+  },
+  clickEvent: function (ev) {
+    var row = this.getRowForEvent(ev);
+    if (row === void 0) { return; }
+    if (ev.button === 2) {
+      this.contextMenuEvent(ev);
+    }
+    else {
+      this.handleSelection(ev, row.get('content'));
+    }
+  },
+  keyDownEvent: function (ev) {
+    // disable default scrolling strategy of the browser
+
+    switch (ev.keyCode) {
+      // arrow up
+      case 38:
+        ev.preventDefault();
+        return this.selectWithArrow('up', ev.shiftKey);
+      // arrow down
+      case 40:
+        ev.preventDefault();
+        return this.selectWithArrow('down', ev.shiftKey);
+      // a
+      case 65:
+        if (ev.ctrlKey || ev.metaKey) { return this.selectAll(); }
+    }
+  },
+  /**
+   * Content menu event (mouse right click) behavior:
+   * 1. If click is on the row that is not selected, the clicked row becomes the selection
+   * 2. If click is on the row that currently is in the list of selection, selection does not change
+   * @param ev
+   */
+  contextMenuEvent: function (ev) {
+    var clickedRow = this.getRowForEvent(ev);
+    if (!this.isSelected(clickedRow.get('content'))) {
+      this.clearSelection();
+      this.addSelected(clickedRow.get('content'));
+    }
+    this.sendAction('contextMenuHandler', this.get('selection'));
   }
 });
 
@@ -643,6 +797,65 @@ Ember.Table.ShowHorizontalScrollMixin = Ember.Mixin.create({
   }
 });
 
+Ember.Table.HeaderContextMenuItem = Ember.View.extend({
+  tagName: 'li',
+  template: Ember.Handlebars.compile('{{input type="checkbox" checked=view.content.isVisible class="toggle"}}\n<label>{{view.content.headerCellName}}</label>'),
+  hover: false,
+  mouseEnter: function(ev) {
+    return this.set('hover', true);
+  },
+  mouseLeave: function() {
+    return this.set('hover', true);
+  },
+  touchStrat: function() {
+    return this.click();
+  }
+});
+
+Ember.Table.HeaderContextMenuMenu = Ember.CollectionView.extend({
+  tagName: 'ul',
+  contentBinding: 'parentView.controller.columns',
+  itemViewClass: Ember.Table.HeaderContextMenuItem,
+  classNames: ['header-contextmenu-menu'],
+  attributeBindings: ['style'],
+  style: Ember.computed(function() {
+    var horizontal, vertical;
+    vertical = 'top:' + this.get('top') + 'px;';
+    horizontal = this.get('left') > (window.innerWidth / 2) ? 'right:' + (window.innerWidth - this.get('left')) + 'px;' : 'left:' + this.get('left') + 'px;';
+    return vertical + horizontal;
+  }).property('top', 'left')
+});
+
+Ember.Table.HeaderContextMenuContainer = Ember.ContainerView.extend({
+  init: function() {
+    this._super();
+    this.pushObject(Ember.Table.HeaderContextMenuMenu.create({
+      top: this.get('event.clientY'),
+      left: this.get('event.clientX')
+    }));
+  },
+  childViews: ['layerView'],
+  layerView: Ember.View.create({
+    classNames: ['header-contextmenu-layer'],
+    close: function() {
+      return this.get('parentView').close();
+    },
+    click: function() {
+      return this.close();
+    },
+    touchStart: function() {
+      return this.click();
+    },
+    contextMenu: function() {
+      return this.close();
+    }
+  }),
+  close: function() {
+    this.clear();
+    return this.destroy();
+  }
+});
+
 
 })();
 (function() {
@@ -664,6 +877,7 @@ Ember.Table.ColumnDefinition = Ember.Object.extend({
   isSortable: true,
   textAlign: 'text-align-right',
   canAutoResize: true,
+  isVisible: true,
   headerCellViewClass: 'Ember.Table.HeaderCell',
   tableCellViewClass: 'Ember.Table.TableCell',
   resize: function(width) {
@@ -716,8 +930,8 @@ Ember.Table.Row = Ember.ObjectProxy.extend({
   */
 
   isSelected: Ember.computed(function() {
-    return this.get('parentController.selection') === this.get('content');
-  }).property('parentController.selection', 'content'),
+    return this.get('parentController.selection').contains(this.get('content'));
+  }).property('parentController.selection.length', 'content'),
   /**
   * Is Showing?
   * @memberof Ember.Table.Row
@@ -791,9 +1005,11 @@ Ember.Table.TableBlock = Ember.CollectionView.extend(Ember.AddeparMixins.StyleBi
 
 Ember.Table.LazyTableBlock = Ember.LazyContainerView.extend({
   classNames: ['ember-table-table-block'],
+  attributeBindings: ['tabIndex'],
   styleBindings: ['width'],
   itemViewClass: Ember.computed.alias('controller.tableRowViewClass'),
   rowHeight: Ember.computed.alias('controller.rowHeight'),
+  tabIndex: -1,
   columns: null,
   content: null,
   scrollLeft: null,
@@ -882,7 +1098,7 @@ Ember.Table.TableRow = Ember.LazyItemView.extend({
 Ember.Table.TableCell = Ember.View.extend(Ember.AddeparMixins.StyleBindingsMixin, {
   templateName: 'table-cell',
   classNames: ['ember-table-cell'],
-  classNameBindings: 'column.textAlign',
+  classNameBindings: ['column.textAlign', 'row.isSelected:ember-table-selected'],
   styleBindings: 'width',
   row: Ember.computed.alias('parentView.row'),
   column: Ember.computed.alias('content'),
@@ -993,6 +1209,20 @@ Ember.Table.HeaderRow = Ember.View.extend(Ember.AddeparMixins.StyleBindingsMixin
   onScrollLeftDidChange: Ember.observer(function() {
     return this.$().scrollLeft(this.get('scrollLeft'));
   }, 'scrollLeft'),
+  init: function() {
+    this._super();
+    if (this.get('controller').get('isHeaderContextMenu')) {
+      return this.contextMenu = function(ev) {
+        var contextmenu;
+        contextmenu = Ember.Table.HeaderContextMenuContainer.create({
+          controller: this.get('controller'),
+          event: ev
+        });
+        contextmenu.append();
+        return false;
+      };
+    }
+  },
   didInsertElement: function() {
     this._super();
     if (this.get('controller.enableColumnReorder')) {
@@ -1304,11 +1534,10 @@ Ember.Table.ScrollPanel = Ember.View.extend(Ember.AddeparMixins.StyleBindingsMix
 * @alias Ember.Table.EmberTableComponent
 */
 
-Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.StyleBindingsMixin, Ember.AddeparMixins.ResizeHandlerMixin, {
+Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.StyleBindingsMixin, Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin, {
   layoutName: 'components/ember-table',
   classNames: ['ember-table-tables-container'],
   classNameBindings: ['enableContentSelection:ember-table-content-selectable'],
-  styleBindings: ['height'],
   height: Ember.computed.alias('_tablesContainerHeight'),
   columns: null,
   numFixedColumns: 0,
@@ -1321,7 +1550,8 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
   forceFillColumns: false,
   enableColumnReorder: true,
   enableContentSelection: false,
-  selection: null,
+  enableSelection: true,
+  isHeaderContextMenu: true,
   tableRowViewClass: 'Ember.Table.TableRow',
   init: function() {
     this._super();
@@ -1340,10 +1570,14 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
     sortByColumn: Ember.K
   },
   onColumnSort: function(column, newIndex) {
-    var columns;
+    var columnDefinitions, columns, newDefIndex;
     columns = this.get('tableColumns');
+    columnDefinitions = this.get('columns');
+    newDefIndex = columnDefinitions.indexOf(columns[newIndex]);
     columns.removeObject(column);
-    return columns.insertAt(newIndex, column);
+    columns.insertAt(newIndex, column);
+    columnDefinitions.splice(columnDefinitions.indexOf(column), 1);
+    return columnDefinitions.splice(newDefIndex, 0, column);
   },
   /**
   * Table Body Content - Array of Ember.Table.Row
@@ -1386,11 +1620,14 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
     if (!columns) {
       return Ember.A();
     }
+    columns = columns.filter(function(c) {
+      return c.isVisible;
+    });
     numFixedColumns = this.get('numFixedColumns') || 0;
     columns = columns.slice(0, numFixedColumns) || [];
     this.prepareTableColumns(columns);
     return columns;
-  }).property('columns.@each', 'numFixedColumns'),
+  }).property('columns.@each.isVisible', 'numFixedColumns'),
   /**
   * Table Columns
   * @memberof Ember.Table.EmberTableComponent
@@ -1404,11 +1641,14 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
     if (!columns) {
       return Ember.A();
     }
+    columns = columns.filter(function(c) {
+      return c.isVisible;
+    });
     numFixedColumns = this.get('numFixedColumns') || 0;
     columns = columns.slice(numFixedColumns, columns.get('length')) || [];
     this.prepareTableColumns(columns);
     return columns;
-  }).property('columns.@each', 'numFixedColumns'),
+  }).property('columns.@each.isVisible', 'numFixedColumns'),
   prepareTableColumns: function(columns) {
     return columns.setEach('controller', this);
   },
@@ -1524,7 +1764,7 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
 
   _tableColumnsWidth: Ember.computed(function() {
     var availableWidth, contentWidth;
-    contentWidth = (this._getTotalWidth(this.get('tableColumns'))) + 3;
+    contentWidth = this._getTotalWidth(this.get('tableColumns'));
     availableWidth = this.get('_width') - this.get('_fixedColumnsWidth');
     if (contentWidth > availableWidth) {
       return contentWidth;
@@ -1677,14 +1917,6 @@ Ember.Table.EmberTableComponent = Ember.Component.extend(Ember.AddeparMixins.Sty
     return widths.reduce((function(total, w) {
       return total + w;
     }), 0);
-  },
-  click: function(event) {
-    var row;
-    row = this.getRowForEvent(event);
-    if (!row) {
-      return;
-    }
-    return this.set('selection', row.get('content'));
   },
   getRowForEvent: function(event) {
     var $rowView, view;

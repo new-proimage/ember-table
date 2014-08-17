@@ -25,6 +25,7 @@ Ember.Table.ColumnDefinition = Ember.Object.extend
   # text align left | center | right
   textAlign: 'text-align-right'
   canAutoResize: yes
+  isVisible: yes
 
   # The view class we want to use for the header
   headerCellViewClass:  'Ember.Table.HeaderCell'
@@ -74,8 +75,8 @@ Ember.Table.Row = Ember.ObjectProxy.extend
   * @instance
   ###
   isSelected: Ember.computed ->
-    @get('parentController.selection') is @get('content')
-  .property 'parentController.selection', 'content'
+    return @get('parentController.selection').contains @get('content')
+  .property 'parentController.selection.length', 'content'
 
   ###*
   * Is Showing?

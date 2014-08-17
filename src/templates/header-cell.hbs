@@ -1,5 +1,5 @@
 <div class="ember-table-content-container" {{action sortByColumn view.content}}>
-  <span class="ember-table-content">
+  <span class="ember-table-content" {{bind-attr title=view.content.headerCellName}}>
     {{view.content.headerCellName}}
   </span>
 </div>

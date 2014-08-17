@@ -44,10 +44,12 @@ Ember.CollectionView.extend Ember.AddeparMixins.StyleBindingsMixin,
 * @alias Ember.Table.LazyTableBlock
 ###
 Ember.Table.LazyTableBlock = Ember.LazyContainerView.extend
-  classNames:       ['ember-table-table-block']
-  styleBindings:    ['width']
-  itemViewClass:    Ember.computed.alias 'controller.tableRowViewClass'
-  rowHeight:        Ember.computed.alias 'controller.rowHeight'
+  classNames:         ['ember-table-table-block'],
+  attributeBindings:  ['tabIndex'],
+  styleBindings:      ['width']
+  itemViewClass:      Ember.computed.alias 'controller.tableRowViewClass'
+  rowHeight:          Ember.computed.alias 'controller.rowHeight'
+  tabIndex:           -1
   columns:    null
   content:    null
   scrollLeft: null
@@ -121,7 +123,7 @@ Ember.Table.TableCell =
 Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   templateName: 'table-cell'
   classNames:         ['ember-table-cell']
-  classNameBindings:  'column.textAlign'
+  classNameBindings:  ['column.textAlign', 'row.isSelected:ember-table-selected'],
   styleBindings:      'width'
   row:        Ember.computed.alias 'parentView.row'
   column:     Ember.computed.alias 'content'
@@ -224,6 +226,16 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   onScrollLeftDidChange: Ember.observer ->
     @$().scrollLeft @get('scrollLeft')
   , 'scrollLeft'
+
+  init: ->
+    @_super()
+    if @get('controller').get('isHeaderContextMenu')
+      @contextMenu = (ev) ->
+        contextmenu = Ember.Table.HeaderContextMenuContainer.create
+          controller: @get('controller')
+          event: ev
+        contextmenu.append()
+        no
 
   didInsertElement: ->
     @_super()

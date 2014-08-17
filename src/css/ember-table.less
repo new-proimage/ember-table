@@ -614,3 +614,33 @@
 // Ember Table Themes
 // -----------------------------------------------------------------------------
 @import 'ember-table-financial';
+
+/* Context Menu
+ +-------------------------------------------------- */
+.header-contextmenu-menu{
+  background-color: white;
+  border: 1px solid @table-body-border-color;
+  padding: 10px;
+  margin: 0;
+  z-index: 5;
+  position: absolute;
+  list-style: none;
+  label{
+    vertical-align: text-bottom;
+    padding-left: 2px;
+    font-weight: normal;
+    margin: 0;
+  }
+}
+
+.header-contextmenu-layer{
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  background-color: #000000;
+  display: block;
+}

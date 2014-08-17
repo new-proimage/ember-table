@@ -94,3 +94,45 @@ Ember.Table.ShowHorizontalScrollMixin = Ember.Mixin.create
     $tablesContainer = $(event.target).parents('.ember-table-tables-container')
     $horizontalScroll = $tablesContainer.find('.antiscroll-scrollbar-horizontal')
     $horizontalScroll.removeClass('antiscroll-scrollbar-shown')
+
+Ember.Table.HeaderContextMenuItem = Ember.View.extend
+  tagName: 'li'
+  template: Ember.Handlebars.compile '''
+    {{input type="checkbox" checked=view.content.isVisible class="toggle"}}
+    <label>{{view.content.headerCellName}}</label>
+  '''
+  hover: false
+  mouseEnter: (ev) -> @set('hover', true)
+  mouseLeave: -> @set('hover', true)
+  touchStrat: -> @click()
+
+Ember.Table.HeaderContextMenuMenu = Ember.CollectionView.extend
+  tagName: 'ul'
+  contentBinding: 'parentView.controller.columns'
+  itemViewClass: Ember.Table.HeaderContextMenuItem
+  classNames: ['header-contextmenu-menu']
+  attributeBindings: ['style']
+  style: Ember.computed ->
+    vertical = 'top:' + @get('top') + 'px;'
+    horizontal = if @get('left') > (window.innerWidth / 2) then 'right:' +  
+      (window.innerWidth - @get('left')) + 'px;' else 'left:' + @get('left') + 'px;'
+    vertical + horizontal
+  .property('top', 'left')
+
+Ember.Table.HeaderContextMenuContainer = Ember.ContainerView.extend
+  init: ->
+    @_super()
+    @pushObject Ember.Table.HeaderContextMenuMenu.create
+      top: @get('event.clientY')
+      left: @get('event.clientX')
+    return
+  childViews: ['layerView']
+  layerView: Ember.View.create
+    classNames: ['header-contextmenu-layer']
+    close: -> @.get('parentView').close()
+    click: -> @close()
+    touchStart: -> @click()
+    contextMenu: -> @close()
+  close: ->
+    @clear()
+    @destroy();

@@ -5,11 +5,11 @@
 ###
 Ember.Table.EmberTableComponent =
 Ember.Component.extend Ember.AddeparMixins.StyleBindingsMixin,
-Ember.AddeparMixins.ResizeHandlerMixin,
+Ember.AddeparMixins.ResizeHandlerMixin, Ember.AddeparMixins.SelectionMixin,
   layoutName:   'components/ember-table'
   classNames:     ['ember-table-tables-container']
   classNameBindings: ['enableContentSelection:ember-table-content-selectable']
-  styleBindings:  ['height']
+#  styleBindings:  ['height']
   height:         Ember.computed.alias '_tablesContainerHeight'
 
   # Array of Ember.Table.ColumnDefinition
@@ -39,7 +39,9 @@ Ember.AddeparMixins.ResizeHandlerMixin,
 
   enableContentSelection: no
 
-  selection: null
+  enableSelection: yes
+
+  isHeaderContextMenu: yes
 
   # specify the view class to use for rendering the table rows
   tableRowViewClass: 'Ember.Table.TableRow'
@@ -56,8 +58,13 @@ Ember.AddeparMixins.ResizeHandlerMixin,
 
   onColumnSort: (column, newIndex) ->
     columns  = @get 'tableColumns'
+    columnDefinitions = @get 'columns'
+    newDefIndex = columnDefinitions.indexOf columns[newIndex]
     columns.removeObject column
     columns.insertAt newIndex, column
+  #changing the order of column definitions too for cinsistency
+    columnDefinitions.splice columnDefinitions.indexOf(column), 1
+    columnDefinitions.splice newDefIndex, 0, column
 
   ###*
   * Table Body Content - Array of Ember.Table.Row
@@ -91,11 +98,12 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   fixedColumns: Ember.computed ->
     columns         = @get 'columns'
     return Ember.A() unless columns
+    columns = columns.filter (c) -> c.isVisible
     numFixedColumns = @get('numFixedColumns') or 0
     columns = columns.slice(0, numFixedColumns) or []
     @prepareTableColumns(columns)
     columns
-  .property 'columns.@each', 'numFixedColumns'
+  .property 'columns.@each.isVisible', 'numFixedColumns'
 
   ###*
   * Table Columns
@@ -106,11 +114,12 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   tableColumns: Ember.computed ->
     columns         = @get 'columns'
     return Ember.A() unless columns
+    columns = columns.filter (c) -> c.isVisible
     numFixedColumns = @get('numFixedColumns') or 0
     columns = columns.slice(numFixedColumns, columns.get('length')) or []
     @prepareTableColumns(columns)
     columns
-  .property 'columns.@each', 'numFixedColumns'
+  .property 'columns.@each.isVisible', 'numFixedColumns'
 
   prepareTableColumns: (columns) ->
     columns.setEach 'controller', this
@@ -221,9 +230,7 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   * @private
   ###
   _tableColumnsWidth: Ember.computed ->
-    # Hack: We add 3px padding to the right of the table content so that we can
-    # reorder into the last column.
-    contentWidth = (@_getTotalWidth @get('tableColumns')) + 3
+    contentWidth = (@_getTotalWidth @get('tableColumns'))
     availableWidth = @get('_width') - @get('_fixedColumnsWidth')
     if contentWidth > availableWidth then contentWidth else availableWidth
   .property 'tableColumns.@each.columnWidth', '_width', '_fixedColumnsWidth'
@@ -353,10 +360,6 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   ##############################################################################
   # selection
   ##############################################################################
-  click: (event) ->
-    row = @getRowForEvent event
-    return unless row
-    @set 'selection', row.get('content')
 
   getRowForEvent: (event) ->
     $rowView = $(event.target).parents('.ember-table-table-row')
